@@ -1,0 +1,12 @@
+build/
+build_binary_file
+logs/
+.DS_Store
+.env
+config.local.yml
+*.exec
+*.exe
+*.bin
+.vscode
+.idea
+CLAUDE.md

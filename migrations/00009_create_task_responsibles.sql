@@ -1,0 +1,9 @@
+-- +goose Up
+CREATE TABLE task_responsibles (
+    task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (task_id, user_id)
+);
+
+-- +goose Down
+DROP TABLE task_responsibles;
