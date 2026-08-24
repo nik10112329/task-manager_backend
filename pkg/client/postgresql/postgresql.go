@@ -13,22 +13,13 @@ func NewClient(ctx context.Context, postgreConfig *config.PostgreSQLConfig) (db 
 
 	logger := logging.GetLogger()
 
-	connectionStr := postgreConfig.DSN()
-
-	poolCfg, err := pgxpool.ParseConfig(connectionStr)
+	poolCfg, err := pgxpool.ParseConfig(postgreConfig.DSN())
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed Parse Postgre Config: %w", err)
 	}
 
-	poolCfg.MaxConns = int32(postgreConfig.MaxOpenConns)
-	poolCfg.MinConns = int32(postgreConfig.MaxIdleConns)
-	poolCfg.MaxConnLifetime = postgreConfig.ConnMaxLifetime
-	poolCfg.MaxConnIdleTime = postgreConfig.ConnMaxIdleTime
-
-	poolCfg.ConnConfig.ConnectTimeout = postgreConfig.ConnectTimeout
-
-	logger.Info("Connection Postgre DB")
+	logger.Info("Connection Postgre DB with config %w", poolCfg)
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 

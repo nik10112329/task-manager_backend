@@ -1,4 +1,4 @@
-package models
+package user
 
 import (
 	"errors"
@@ -9,17 +9,18 @@ import (
 )
 
 type UserEntity struct {
-	ID              string
-	DisplayName     string
-	Email           string
-	PhotoURL        string
-	PhoneNumber     string
-	EmailVerify     bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	LinkedProviders []string
-	SignInMethod    string
-	JwtToken        JwtToken
+	ID          string
+	DisplayName string `json:"display_name"`
+	// Password		string `json:"-"`
+	Email            string    `json:"email"`
+	PhotoURL         string    `json:"photo_url"`
+	PhoneNumber      string    `json:"phone_number"`
+	EmailVerify      bool      `json:"email_verify"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+	IdLinkedProvider []string  `json:"id_linked_provider"`
+	SignInMethod     string    `json:"sign_in_method"`
+	LastLoginAt      time.Time `json:"last_login_at"`
 }
 
 func NewUser() UserEntity {
@@ -32,13 +33,14 @@ func CreateUserEntityFromJson(json render.JSON) (UserEntity, error) {
 	if errorIdGenerate != nil {
 		return UserEntity{}, errorIdGenerate
 	}
-	jwtToken, jwtError := newJwtToken()
-	if jwtError != nil {
-		return UserEntity{}, jwtError
-	}
+	// jwtToken, jwtError := newJwtToken()
+	// if jwtError != nil {
+	// 	return UserEntity{}, jwtError
+	// }
 	return UserEntity{
 		newUserId.String(),
 		jsonData["firstName"].(string) + " " + jsonData["lastName"].(string),
+		// jsonData["password"].(string),
 		jsonData["email"].(string),
 		jsonData["photoUrl"].(string),
 		jsonData["phoneNumber"].(string),
@@ -47,7 +49,7 @@ func CreateUserEntityFromJson(json render.JSON) (UserEntity, error) {
 		time.Now(),
 		[]string{jsonData["linkedProviders"].([]interface{})[0].(string), "originalBackend"},
 		"originalBackend",
-		jwtToken,
+		time.Now(),
 	}, nil
 }
 
@@ -56,10 +58,10 @@ func CreateUserEntityFromFirebase(json render.JSON) (UserEntity, error) {
 	if jsonData == nil {
 		return UserEntity{}, errors.New("invalid json data")
 	}
-	jwtToken, jwtError := newJwtToken()
-	if jwtError != nil {
-		return UserEntity{}, jwtError
-	}
+	// jwtToken, jwtError := newJwtToken()
+	// if jwtError != nil {
+	// 	return UserEntity{}, jwtError
+	// }
 	return UserEntity{
 		jsonData["id"].(string),
 		jsonData["displayName"].(string),
@@ -71,6 +73,6 @@ func CreateUserEntityFromFirebase(json render.JSON) (UserEntity, error) {
 		time.Now(),
 		[]string{jsonData["linkedProviders"].([]interface{})[0].(string), "originalBackend"},
 		jsonData["signInMethod"].(string),
-		jwtToken,
+		time.Now(),
 	}, nil
 }
