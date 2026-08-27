@@ -12,7 +12,7 @@ import (
 const (
 	usersUrl      = "/users"
 	userUrl       = "/users/:uuid"
-	createUserUrl = "/users"
+	createUserUrl = "/user/create"
 )
 
 type handler struct {
