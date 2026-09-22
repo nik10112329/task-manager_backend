@@ -4,9 +4,11 @@ import (
 	// "learning-project/internal/transport/rest"
 
 	// "github.com/gin-gonic/gin"
+	"context"
 	"fmt"
 	"learning-project/internal/config"
 	"learning-project/internal/user"
+	"learning-project/pkg/client/postgresql"
 	"learning-project/pkg/logging"
 	"log"
 	"net"
@@ -103,7 +105,17 @@ func main() {
 
 	logger.Info("register user handler")
 
-	handler := user.NewHandler(logger)
+	ctx := context.Background()
+
+	pool, err := postgresql.NewClient(ctx, &config.PostgreSQL)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	userStorage := user.NewStorage(pool, logger)
+
+	service := user.NewService(userStorage)
+
+	handler := user.NewHandler(logger, service)
 
 	handler.Register(router)
 

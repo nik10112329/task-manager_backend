@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"learning-project/pkg/logging"
+	"time"
+
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
 
 type db struct {
 	pool   *pgxpool.Pool
@@ -17,36 +19,66 @@ func NewStorage(pool *pgxpool.Pool, logger *logging.Logger) Storage {
 	return &db{pool: pool, logger: logger}
 }
 
-func (d *db) FindOne(ctx context.Context, id string) (UserEntity, error) {
+func (d *db) FindOneById(ctx context.Context, id string) (UserEntity, error) {
 	var u UserEntity
 	err := d.pool.QueryRow(ctx, `
         SELECT id, email, display_name, sign_in_method, id_linked_provider,
                photo_url, phone_number, email_verified, created_at, last_login_at
         FROM users WHERE id = $1
-    `, id).Scan(&u.ID, &u.Email, &u.DisplayName, &u.SignInMethod, &u.IdLinkedProvider,
+    `, id).Scan(&u.ID, &u.Email, &u.DisplayName, &u.SignInMethod, &u.IDLinkedProvider,
 		&u.PhotoURL, &u.PhoneNumber, &u.EmailVerify, &u.CreatedAt, &u.LastLoginAt)
 	if err != nil {
-		// pgx.ErrNoRows → это не "ошибка сервера", а "пользователь не найден" —
-		// на уровне service это два разных исхода, не заворачивайте их в один и тот же err
 		return UserEntity{}, fmt.Errorf("find user by id: %w", err)
 	}
 	return u, nil
 }
-
-func (d *db) Create(ctx context.Context, user UserEntity) (string, error) {
+func (d *db) FindOneByParams(ctx context.Context, id string, email string, phoneNumber string) (UserEntity, error) {
 	var u UserEntity
 	err := d.pool.QueryRow(ctx, `
-		INSERT INTO users (id, email, display_name, sign_in_method, id_linked_provider,
-			photo_url, phone_number, email_verified, created_at, last_login_at) 
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-	`, user.ID, user.Email, user.DisplayName, user.SignInMethod, user.IdLinkedProvider,
-		user.PhotoURL, user.PhoneNumber, user.EmailVerify, user.CreatedAt, user.LastLoginAt).Scan(&u.ID,
-		&u.Email, &u.DisplayName, &u.SignInMethod, &u.IdLinkedProvider,
+        SELECT id, email, display_name, sign_in_method, id_linked_provider,
+               photo_url, phone_number, email_verified, created_at, last_login_at
+        FROM users WHERE id = $1 OR email = $2 OR phone_number = $3
+    `, id, email, phoneNumber).Scan(&u.ID, &u.Email, &u.DisplayName, &u.SignInMethod, &u.IDLinkedProvider,
 		&u.PhotoURL, &u.PhoneNumber, &u.EmailVerify, &u.CreatedAt, &u.LastLoginAt)
+	if err != nil {
+		return UserEntity{}, fmt.Errorf("find user by params: %w", err)
+	}
+	return u, nil
+}
+func (d *db) Create(ctx context.Context, user UserEntity) (string, error) {
+	user.CreatedAt = time.Now()
+	generatedID, err := uuid.NewV7()
+
+	if err != nil {
+		return "", fmt.Errorf("generate uuid: %w", err)
+	}
+
+	user.ID = generatedID.String()
+	tx, err := d.pool.Begin(ctx)
+	if err != nil {
+		return "", fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	_, err = tx.Exec(ctx,
+		`INSERT INTO users (id, email, display_name, sign_in_method, id_linked_provider,
+			photo_url, phone_number, email_verified, created_at, last_login_at) 
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`, user.ID, user.Email, user.DisplayName, user.SignInMethod, user.IDLinkedProvider,
+		user.PhotoURL, user.PhoneNumber, user.EmailVerify, user.CreatedAt, user.LastLoginAt)
 	if err != nil {
 		return "", fmt.Errorf("create user: %w", err)
 	}
-	return u.ID, nil
+
+	_, err = tx.Exec(ctx,
+		`INSERT INTO user_linked_providers (user_id, provider) SELECT $1, unnest($2::text[])
+   			ON CONFLICT DO NOTHING`, user.ID, user.LinkedProviders)
+	if err != nil {
+		return "", fmt.Errorf("create user: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return "", fmt.Errorf("commit tx: %w", err)
+	}
+
+	return user.ID, nil
 }
 
 func (d *db) Update(ctx context.Context, user UserEntity) error {
@@ -55,7 +87,7 @@ func (d *db) Update(ctx context.Context, user UserEntity) error {
 		id_linked_provider = $5, photo_url = $6, phone_number = $7, email_verified = $8, 
 		last_login_at = $9
 		WHERE id = $1
-	`, user.ID, user.Email, user.DisplayName, user.SignInMethod, user.IdLinkedProvider,
+	`, user.ID, user.Email, user.DisplayName, user.SignInMethod, user.IDLinkedProvider,
 		user.PhotoURL, user.PhoneNumber, user.EmailVerify, user.LastLoginAt)
 	if err != nil {
 		return fmt.Errorf("update user: %w", err)

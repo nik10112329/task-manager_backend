@@ -21,7 +21,7 @@ func newJwtToken() (JwtToken, error) {
 		return JwtToken{}, idError
 	}
 	token, tokenError := jwt.New(jwt.SigningMethodRS512).SigningString()
-	if tokenError != nil {
+	 if tokenError != nil {
 		return JwtToken{}, tokenError
 	}
 	return JwtToken{
