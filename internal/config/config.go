@@ -46,6 +46,12 @@ type PostgreSQLConfig struct {
 	MigrationsPath  string        `yaml:"migrations_path" env-default:"./migrations"`
 }
 
+type AuthConfig struct {
+	JWTSecret       string        `env:"JWT_SECRET" env-required:"true"`
+	AccessTokenTTL  time.Duration `yaml:"access_token_ttl" env-default:"15m"`
+	RefreshTokenTTL time.Duration `yaml:"refresh_token_ttl" env-default:"720h"`
+}
+
 // DSN собирает строку подключения. (Data Source Name)
 // url.UserPassword экранирует спецсимволы — Neon генерирует
 // пароли с #, /, @, и склейка через Sprintf ломает подключение.

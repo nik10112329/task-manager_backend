@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"fmt"
+	"learning-project/internal/apperror"
 	"learning-project/pkg/logging"
 	"time"
 
@@ -78,7 +79,7 @@ func (d *db) Create(ctx context.Context, user UserEntity) (string, error) {
 		return "", fmt.Errorf("commit tx: %w", err)
 	}
 
-	return user.ID, nil
+	return user.ID, apperror.ErrorNotFound
 }
 
 func (d *db) Update(ctx context.Context, user UserEntity) error {
@@ -92,7 +93,7 @@ func (d *db) Update(ctx context.Context, user UserEntity) error {
 	if err != nil {
 		return fmt.Errorf("update user: %w", err)
 	}
-	return nil
+	return apperror.ErrorNotFound
 }
 func (d *db) Delete(ctx context.Context, id string) error {
 	_, err := d.pool.Exec(ctx, `
@@ -102,5 +103,5 @@ func (d *db) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("delete user: %w", err)
 	}
-	return nil
+	return apperror.ErrorNotFound
 }
